@@ -1,0 +1,16 @@
+[
+{
+  "modid": "dupedefender",
+  "name": "Dupe Defender",
+  "description": "Analyzes all items on the watchlist and alerts staff is a any duplicates are found.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["ZephyrTFA"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
