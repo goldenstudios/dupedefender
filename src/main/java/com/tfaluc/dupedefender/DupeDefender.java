@@ -1,5 +1,6 @@
 package com.tfaluc.dupedefender;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.config.ConfigCategory;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
@@ -7,6 +8,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
@@ -28,6 +31,9 @@ public class DupeDefender {
     public static final Map<String, Set<UUID>> watchList = new HashMap<>();
     public static final Map<String, Set<UUID>> usedUUIDs = new HashMap<>();
 
+    @SideOnly(Side.SERVER)
+    public static MinecraftServer MCServer;
+
     public void loadConfig() {
         ConfigCategory c = config.getCategory("general");
         if (c.containsKey("watchers"))
@@ -38,6 +44,7 @@ public class DupeDefender {
             toWatchList.addAll(Arrays.stream(c.get("watch").getString().split("\\|"))
                     .filter(s -> !s.equals("")).collect(Collectors.toSet()));
         for (String name : c.keySet()) {
+            if(name.equals("watch")) continue;
             Set<UUID> used = Arrays.stream(c.get(name).getString().split("\\|"))
                     .filter(s -> !s.equals("")).map(UUID::fromString).collect(Collectors.toSet());
             usedUUIDs.put(name, used);
@@ -87,5 +94,6 @@ public class DupeDefender {
     @Mod.EventHandler
     public void onServerStart(FMLServerStartingEvent event) {
         event.registerServerCommand(new DupeCommand());
+        MCServer = event.getServer();
     }
 }

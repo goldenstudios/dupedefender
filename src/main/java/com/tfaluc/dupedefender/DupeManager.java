@@ -5,6 +5,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -30,6 +31,9 @@ public class DupeManager {
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         processPlayer(event.player);
+
+        if(watchers.contains(event.player.getUniqueID()))
+            event.player.sendMessage(new TextComponentString("You're a DupeDefender watcher! Time for crime."));
     }
 
     /**
@@ -67,6 +71,7 @@ public class DupeManager {
         } catch (NullPointerException e) {
             logger.warn("NullPointer exception when trying to process a thrown item, this shouldn't be possible", e);
         }
+        processPlayer(event.getPlayer());
     }
 
     public static void processWorld(World world) {
@@ -106,6 +111,7 @@ public class DupeManager {
             logger.warn("Attempted to call processItem on an item with no registry name", e);
             return itemStack;
         }
+        if(itemName.equals("minecraft:air")) return itemStack; // GO AWAY YOU
         logger.debug("Checking item: " + itemName);
         if (toWatchList.contains(itemName)) {
             logger.debug("  Item on toWatchList!");
@@ -120,7 +126,7 @@ public class DupeManager {
             UUID uuid = itemTag.getUniqueId(NBTKey);
             if (uuidSet.contains(uuid)) {
                 logger.debug("  Item already present on watch list. Uh oh.");
-                // TODO: ALERT WATCHERS OF THE itemStack AND ALSO itemStackOwner
+                alertDupe(itemStack, itemStackOwner);
             } else {
                 uuidSet.add(uuid);
                 watchList.put(itemName, uuidSet);
@@ -128,5 +134,13 @@ public class DupeManager {
             }
         }
         return itemStack;
+    }
+
+    public static void alertDupe(ItemStack itemStack, EntityPlayer itemStackOwner) {
+        for (UUID watcher : watchers) {
+            MCServer.getPlayerList().getPlayerByUUID(watcher).sendMessage(new TextComponentString(
+                    String.format("Found possibly duped [%s] on [%s]",
+                            itemStack.getItem().getRegistryName(), itemStackOwner.getDisplayNameString())));
+        }
     }
 }
