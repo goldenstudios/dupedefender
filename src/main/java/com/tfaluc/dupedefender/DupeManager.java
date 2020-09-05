@@ -51,8 +51,6 @@ public class DupeManager {
      * <p>
      * When the itemstack is tossed out of the inventory we remove it from the watchList
      * to prevent a false positive when/if it gets picked back up.
-     * TODO: THIS CAN CAUSE TWO ITEMS TO HAVE DUPLICATE UUIDs VERY RARELY.
-     * TODO: BECAUSE WE ONLY CHECK AGAINST UUIDs IN THE WATCHLIST ON GENERATING A NEW UUID
      */
     @SubscribeEvent
     @SuppressWarnings("ConstantConditions")
@@ -64,6 +62,7 @@ public class DupeManager {
             if (tag.hasUniqueId(NBTKey)) {
                 watchList.getOrDefault(item.getItem().getRegistryName().toString(), new HashSet<>())
                         .remove(tag.getUniqueId(NBTKey));
+                logger.debug("Removed dropped item from watchList with the UUID of " + tag.getUniqueId(NBTKey));
             }
         } catch (NullPointerException e) {
             logger.warn("NullPointer exception when trying to process a thrown item, this shouldn't be possible", e);
@@ -84,11 +83,17 @@ public class DupeManager {
     }
 
     public static UUID genUUID(String itemName) {
-        UUID id;
-        do {
-            id = UUID.randomUUID();
-        } while (watchList.getOrDefault(itemName, new HashSet<>()).contains(id));
-        return id;
+        // synchronization shouldn't be needed, but this is to prevent edge case scenarios
+        synchronized (usedUUIDs) {
+            UUID id;
+            Set<UUID> existing = usedUUIDs.getOrDefault(itemName, new HashSet<>());
+            do {
+                id = UUID.randomUUID();
+            } while (existing.contains(id));
+            existing.add(id);
+            usedUUIDs.put(itemName, existing);
+            return id;
+        }
     }
 
     @SuppressWarnings("ConstantConditions")
@@ -115,7 +120,7 @@ public class DupeManager {
             UUID uuid = itemTag.getUniqueId(NBTKey);
             if (uuidSet.contains(uuid)) {
                 logger.debug("  Item already present on watch list. Uh oh.");
-                // TODO: ALERT STAFF OF THE itemStack AND ALSO itemStackOwner
+                // TODO: ALERT WATCHERS OF THE itemStack AND ALSO itemStackOwner
             } else {
                 uuidSet.add(uuid);
                 watchList.put(itemName, uuidSet);
